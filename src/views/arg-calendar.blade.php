@@ -1,12 +1,23 @@
 @props([
     "bookings" => [],
     "formAction" => "",
-    "allowPast" => config("arg-calendar.booking.allowPast"),
-    "bookingOptions" => config("arg-calendar.booking.options"),
-    "showOccupation" => trans(config("arg-calendar.booking.showOccupation")),
-    "dayNames" => trans(config("arg-calendar.localizationKeys.dayNamesShort")),
-    "monthNames" => trans(config("arg-calendar.localizationKeys.monthNames")),
+    "allowPast" => config("arg-calendar.allowPast"),
+    "showOccupation" => config("arg-calendar.showOccupation"),
+    "dayNames" => trans('arg-calendar.' . config("arg-calendar.localizationKeys.dayNamesShort")),
+    "monthNames" => trans('arg-calendar.' . config("arg-calendar.localizationKeys.monthNames")),
+    "bookingOptions" => null,
 ])
+
+@php
+    if($bookingOptions === null){
+        $bookingOptions = config("arg-calendar.options");
+        if(config("arg-calendar.translateOptionKeys")){
+            foreach ($bookingOptions as $key => &$value) {
+                $value = trans('arg-calendar.' . $value);
+            }
+        }
+    }
+@endphp
 
 <style>
     [x-cloak] { 
@@ -22,14 +33,14 @@
     }
 
     .calendar-box{
-        border-width: {{ config("arg-calendar.booking.hoverBorderWidth") ?? 'initial' }};
-        border-radius: {{ config("arg-calendar.booking.boxBorderRadius") ?? 'initial' }};
+        border-width: {{ config("arg-calendar.hoverBorderWidth") ?? 'initial' }};
+        border-radius: {{ config("arg-calendar.boxBorderRadius") ?? 'initial' }};
         @if(!$showOccupation)
-            background-color: {{ config("arg-calendar.booking.boxBackColorWhenNoOccupation") ?? 'initial' }};
+            background-color: {{ config("arg-calendar.boxBackColorWhenNoOccupation") ?? 'initial' }};
         @endif
     }
     .calendar-box:hover{
-        border-color: {{ config("arg-calendar.booking.hoverBorderColor") ?? 'initial' }};
+        border-color: {{ config("arg-calendar.hoverBorderColor") ?? 'initial' }};
     }
 
     .calendar-row-cols-7 > *{
@@ -37,29 +48,23 @@
         flex: 0 0 auto !important;
     }
     .calendar-today{
-        color: {{ config("arg-calendar.booking.todayTextColor") ?? 'initial' }};
+        color: {{ config("arg-calendar.todayTextColor") ?? 'initial' }};
     }
     .calendar-selected{
-        border-color: {{ config("arg-calendar.booking.selectedBorderColor") ?? 'initial' }};
-        border-width: {{ config("arg-calendar.booking.selectedBorderWidth") ?? 'initial' }};
+        border-color: {{ config("arg-calendar.selectedBorderColor") ?? 'initial' }};
+        border-width: {{ config("arg-calendar.selectedBorderWidth") ?? 'initial' }};
     }
     .calendar-free{
-        background-color: {{ config("arg-calendar.booking.freeBackColor") ?? 'initial' }};
-        opacity: {{ config("arg-calendar.booking.backColorOpacity") ?? '1' }};
+        background-color: {{ config("arg-calendar.freeBackColor") ?? 'initial' }};
+        opacity: {{ config("arg-calendar.backColorOpacity") ?? '1' }};
     }
     .calendar-occupied{
-        background-color: {{ config("arg-calendar.booking.occupiedBackColor") ?? 'initial' }};
+        background-color: {{ config("arg-calendar.occupiedBackColor") ?? 'initial' }};
     }
 </style>
 
-<div x-cloak x-data='calendarData({
-        allowPast :         @json($allowPast), 
-        dayNames :          @json($dayNames),
-        monthNames :        @json($monthNames),
-        bookingOptions :    @json($bookingOptions), 
-        bookings :          @json($bookings)
-    })' class="calendar">
-    <h2 class="text-center fw-bold mb-3">@lang('Availability Calendar')</h2>
+<div x-cloak x-data='calendarData()' class="calendar">
+    <h2 class="text-center fw-bold mb-3">@lang('arg-calendar.availability_calendar')</h2>
     <div class="row">
         <div class="col-md-12">
             <div class="d-flex shadow-lg">
@@ -141,16 +146,16 @@
                         <h4 class="fw-bold" x-text="getSelectedStr()"></h4>
                         <div>
                             <template x-if="selectedPast">
-                                <div class="text-danger">@lang('Past dates cannot be booked!') </div>
+                                <div class="text-danger">@lang('arg-calendar.no_past_dates') </div>
                             </template>
                             <template x-if="!selectedPast">
                                 <form class="mt-3 form flex flex-column" x-ref="form" method="GET"
                                     action="{{ $formAction }}">
                                     <template x-if="selected.occupiedArr.some(t => !t)">
-                                        <div>@lang('Please choose a time period:')</div>
+                                        <div class="pb-1">@lang('arg-calendar.availability_calendar')</div>
                                     </template>
                                     <template x-if="!selected.occupiedArr.some(t => !t)">
-                                        <div class="text-danger">@lang('This day is occupied.') </div>
+                                        <div class="pb-1 text-danger">@lang('arg-calendar.day_is_occupied') </div>
                                     </template>
                                     <input type="hidden" name="year" x-bind:value="year">
                                     <input type="hidden" name="month" x-bind:value="month">
@@ -170,7 +175,7 @@
 
                                     <div class="text-center">
                                         <input class="btn btn-success btn-sm mt-2 px-2 align-self-center" type="submit"
-                                            value="@lang(" Continue")"
+                                            value="@lang("arg-calendar.continue")"
                                             x-bind:disabled="!bookingOptions.some(t => t.checked)"
                                             x-on:click.prevent="submit">
                                     </div>
@@ -185,10 +190,15 @@
 </div>
 
 <script>
-    function calendarData(config) {
+    function calendarData() {
         return {
-            dayNames: config.dayNames,
-            monthNames: config.monthNames,
+            dayNames: @json($dayNames),
+            monthNames: @json($monthNames),
+            bookingOptions : @json($bookingOptions),
+            bookings: @json($bookings),
+            bookingHours: [],
+            allowPast: @json($allowPast),
+            selectedPast: false,
             month: '',
             year: '',
             days_of_current: [],
@@ -199,11 +209,6 @@
                 date: new Date(),
                 occupiedArr: []
             },
-            allowPast: config.allowPast,
-            selectedPast: false,
-            bookings: config.bookings,
-            bookingHours: [],
-            bookingOptions: [],
             init() {
                 this.today.setHours(0, 0, 0, 0);
                 this.month = this.today.getMonth();
@@ -211,17 +216,19 @@
                 this.selected.date = this.today;
 
                 const hours = [];
-                for (const key in config.bookingOptions) {
+                let tmpOpts = [];
+                for (const key in this.bookingOptions) {
                     key.split("-").map(t => parseInt(t)).forEach(t => {
                         if (!hours.includes(t))
                             hours.push(t);
                     })
-                    this.bookingOptions.push({
+                    tmpOpts.push({
                         "id": key,
-                        "text": key.replace("-", ":00 - ") + ":00 " + config.bookingOptions[key],
+                        "text": key.replace("-", ":00 - ") + ":00 " + this.bookingOptions[key],
                         "checked": false
                     });
                 }
+                this.bookingOptions = tmpOpts;
                 this.bookingHours = hours.sort((a, b) => a - b);
 
                 this.setDaysOfCalendar();
@@ -236,8 +243,7 @@
             },
             getSelectedStr() {
                 const date = this.selected.date;
-                return this.dayNames[date.getDay()] + ", " + date.getDate() + ". " + this.monthNames[date.getMonth()] +
-                    " " + date.getFullYear();
+                return this.dayNames[date.getDay()] + ", " + date.getDate() + ". " + this.monthNames[date.getMonth()] +  " " + date.getFullYear();
             },
             isSelectedDate(day) {
                 return this.selected.date.toDateString() === this.date(this.year, this.month, day).toDateString();
@@ -279,7 +285,7 @@
                     }
                 })[0];
                 this.bookingOptions.forEach(t => t.checked = false);
-                if (!config.allowPast && (this.selected.date.getTime() < this.today.getTime())) {
+                if (!this.allowPast && (this.selected.date.getTime() < this.today.getTime())) {
                     this.selectedPast = true;
                     // alert("Cant select past day");
                 } else
@@ -297,9 +303,7 @@
                     url.searchParams.append("hours", checked[0].id)
                     location.href = url.toString();
                 } else
-                    alert(
-                        "You have not selected a period! (Normally you shouldn't have seen this warning! Apparently someone changed a code!)"
-                        );
+                    alert( "You have not selected a period! (Normally you shouldn't have seen this warning! Apparently someone changed a code!)" );
             },
 
             setDaysOfCalendar() {
@@ -315,10 +319,9 @@
                         value: i + 1,
                         occupiedArr: new Array(this.bookingHours.length - 1).fill(0)
                     };
-                    let rangesArr = config.bookings.filter(t => t.year == this.year && t.month == this.month +
-                            1 && t.day == res.value)
-                        .map(t => t.ranges);
-                    if (rangesArr.length > 0)
+                    let rangesArr = this.bookings.filter(t => t.year == this.year && t.month == this.month + 1 && t.day == res.value)
+                                                    .map(t => t.ranges);
+                    if (rangesArr && rangesArr.length > 0)
                         res.occupiedArr = rangesArr.reduce((a, b) => a.map((c, i) => b[i] || c));
 
                     return res;
