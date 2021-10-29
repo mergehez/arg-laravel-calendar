@@ -13,7 +13,7 @@ composer require mergesoft/arg-calendar
 php artisan vendor:publish --provider="MergeSoft\CalendarServiceProvider" --tag="config"
 ```
 3. Publish translation file. (output: resources/lang/**\<lang-code\>**/arg-calendar.php) <br>
-   The command below publishes english translations. You can replace '**en**' with another language code. But first check [translation files](https://github.com/mergehez/arg-laravel-calendar/tree/master/src/translations) folder for other available languages. If the language you are looking for does not exist there, then you can simply copy a random file to requested language's folder and modify translations.
+   The command below publishes english translations. You can replace '**en**' with another language code. But first check [translation files](https://github.com/mergehez/arg-laravel-calendar/tree/master/src/translations) folder for other available languages. If the language you are looking for does not exist there, then you can simply copy a random file to requested language's folder and modify translations. (It'd make me really happy, if you make a pull request with the new translation or send it to me via email)
 ```
 php artisan vendor:publish --provider="MergeSoft\CalendarServiceProvider" --tag="lang.en"
 ```
